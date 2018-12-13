@@ -16,6 +16,7 @@
 #include "TCanvas.h"
 #include "RooPlot.h"
 #include "TAxis.h"
+#include <RooBernstein.h>
 #include <RooCBShape.h>
 using namespace RooFit ;
 
@@ -131,59 +132,60 @@ void zdecay::Loop()
          TLorentzVector v3 = v1+v2;
          h1 -> Fill(v3.M());
       
-               }
+                 }
       
                                                     }
 
-      // for ( int i = 14; i<=28; i++){
-      //    double a = h1->GetBinCenter(i);
-      //    h1 -> SetBinContent(i,100.);
-      // }
-      
+         h1->Draw();
+         
 
-   RooRealVar x("x","mass",0.,1000.);
-   // x.setRange("Range1",35.75,50.13) ;
-   x.setRange("Range2",110.101,200.) ;
-   RooRealVar lambda("lambda", "slope", -0.001, -1., 1.);
-   RooExponential expo("expo", "expo", x, lambda);
-   RooExponential expo1("expo1", "expo", x, lambda);
-   RooDataHist dh("dh","e-e+ peak histo",x,Import(*h1)) ;
-   // RooFitResult* r = 
-   RooExtendPdf background("background","Side Bands",expo,x,"FULL") ;
-   RooFitResult* r = expo.fitTo(dh,Range("Range2"), Save(kTRUE)) ;
-   r -> Print();
-   
-   RooPlot* frame = x.frame() ;
-   RooPlot* frame1 = x.frame() ;
+         RooRealVar x("x","mass",18,500);
+         x.setRange("Range1",10.,170.) ;
+         // x.setRange("Range2",106.9,500.) ;
+         RooRealVar a1("a1","a1",-50,400);
+         RooRealVar a2("a2","a2",-50,400);
+         RooRealVar a3("a3","a3",-50,400);
+         RooRealVar a4("a4","a4",-500,1000);
+         RooRealVar a5("a5","a5",-50,1000);
+         RooRealVar a6("a6","a6",-50,100);
+         RooRealVar a7("a7","a7",-50,100);
+         RooRealVar a8("a8","a8",-50,100);
+         RooRealVar a9("a9","a9",-50,100);
+         RooRealVar aa("aa","aa",-50,100);
+         RooDataHist dh("dh","e-e+ peak histo",x,Import(*h1)) ;
+         RooRealVar lambda("lambda", "slope", -0.01, -1., 1.);
+         RooExponential expo("expo", "expo", x, lambda);
+         
 
-      
-   dh.plotOn(frame,DrawOption("B"),DataError(RooAbsData::None),FillColor(kGray));
-   expo.plotOn(frame);
-   // background.plotOn(frame,LineStyle(kDashed),LineColor(kRed));
-   
+         RooRealVar mass("mass","Central value of Gaussian",90.,80.,100.);
+         RooRealVar sigma("sigma","Width of Gaussian",20,0,100);
+         RooGaussian signal("gaus", "The signal distribution", x, mass, sigma); 
 
-   RooDataSet *h2 = expo.generate(x,2500);
-   
-   
-   h2-> plotOn(frame1, LineColor(kBlue));
-   
-   TH1* h2_hist = h2->createHistogram("h2_hist", x);
-   RooDataHist dh2("dh2","e-e+ peak histo",x,Import(*h2_hist)) ;
-   RooFitResult* r2 = expo1.fitTo(dh2, Save(kTRUE)) ;
-   r2 -> Print();
-   
-   RooPlot *frame3 = x.frame();
-   dh2.plotOn(frame3);
-   expo1.plotOn(frame3);
-   
-   TCanvas* c = new TCanvas("canvas","canvas",800,800) ;
-   c -> Divide(2,2);
-   c -> cd(1);
-   frame -> Draw();
-   c -> cd(2);
-   frame1 -> Draw();
-   c -> cd(3);
-   frame3 -> Draw();
+         RooRealVar b("b", "Number of background events", 0, 40000);
+         RooRealVar s("s", "Number of signal events", 0, 40000);
+         RooBernstein bg_bern("bg_bern","background",x, RooArgList(a1,a2,a3,a4,a5,a6,a7,a8,a9));
+
+         RooAddPdf fullModel("fullModel", "Signal + bg_bern", RooArgList(signal, bg_bern), RooArgList(s, b));
+         RooFitResult* r = fullModel.fitTo(dh,Save(kTRUE),Range(10.,170.)) ;
+         r -> Print();
+         RooPlot* frame1 = x.frame();
+         RooPlot* frame2 = x.frame();
+
+         dh.plotOn(frame1);
+         fullModel.plotOn(frame1);
+         fullModel.plotOn(frame2);
+         // expo.plotOn(frame);
+         
+         // frame -> Draw();
+         TCanvas* c = new TCanvas("canvas","canvas",1000,1000) ;
+         c -> Divide(2,2);
+         c -> cd(1);
+         frame1 -> Draw();
+         c -> cd(2);
+         frame2 ->Draw();
+
+
+  
 }
 
 
@@ -220,6 +222,55 @@ void zdecay::Loop()
       // h1 ->Draw();
       
 
+
+
+
+
+// Roofit with expo and gaussian
+
+//  RooRealVar x("x","mass",0.,1000.);
+//    // x.setRange("Range1",35.75,50.13) ;
+//    x.setRange("Range2",110.101,200.) ;
+//    RooRealVar lambda("lambda", "slope", -0.001, -1., 1.);
+//    RooExponential expo("expo", "expo", x, lambda);
+//    RooExponential expo1("expo1", "expo", x, lambda);
+//    RooDataHist dh("dh","e-e+ peak histo",x,Import(*h1)) ;
+//    // RooFitResult* r = 
+//    RooExtendPdf background("background","Side Bands",expo,x,"FULL") ;
+//    RooFitResult* r = expo.fitTo(dh,Range("Range2"), Save(kTRUE)) ;
+//    r -> Print();
+   
+//    RooPlot* frame = x.frame() ;
+//    RooPlot* frame1 = x.frame() ;
+
+      
+//    dh.plotOn(frame,DrawOption("B"),DataError(RooAbsData::None),FillColor(kGray));
+//    expo.plotOn(frame);
+//    // background.plotOn(frame,LineStyle(kDashed),LineColor(kRed));
+   
+
+//    RooDataSet *h2 = expo.generate(x,2500);
+   
+   
+//    h2-> plotOn(frame1, LineColor(kBlue));
+   
+//    TH1* h2_hist = h2->createHistogram("h2_hist", x);
+//    RooDataHist dh2("dh2","e-e+ peak histo",x,Import(*h2_hist)) ;
+//    RooFitResult* r2 = expo1.fitTo(dh2, Save(kTRUE)) ;
+//    r2 -> Print();
+   
+//    RooPlot *frame3 = x.frame();
+//    dh2.plotOn(frame3);
+//    expo1.plotOn(frame3);
+   
+//    TCanvas* c = new TCanvas("canvas","canvas",800,800) ;
+//    c -> Divide(2,2);
+//    c -> cd(1);
+//    frame -> Draw();
+//    c -> cd(2);
+//    frame1 -> Draw();
+//    c -> cd(3);
+//    frame3 -> Draw();
       
       
      

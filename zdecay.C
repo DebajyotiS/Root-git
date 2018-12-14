@@ -136,53 +136,73 @@ void zdecay::Loop()
       
                                                     }
 
-         h1->Draw();
+         // h1->Draw();
          
 
-         RooRealVar x("x","mass",18,500);
-         x.setRange("Range1",10.,170.) ;
-         // x.setRange("Range2",106.9,500.) ;
-         RooRealVar a1("a1","a1",-50,400);
+         RooRealVar x("x","mass",18.,500.);
+         x.setRange("Range1",25.,75.) ;
+         x.setRange("Range2",107.,500.) ;
+         RooRealVar a1("a1","a1",-50,1000);
          RooRealVar a2("a2","a2",-50,400);
          RooRealVar a3("a3","a3",-50,400);
          RooRealVar a4("a4","a4",-500,1000);
          RooRealVar a5("a5","a5",-50,1000);
-         RooRealVar a6("a6","a6",-50,100);
-         RooRealVar a7("a7","a7",-50,100);
+         RooRealVar a6("a6","a6",-50,1000);
+         RooRealVar a7("a7","a7",-50,1000);
          RooRealVar a8("a8","a8",-50,100);
          RooRealVar a9("a9","a9",-50,100);
          RooRealVar aa("aa","aa",-50,100);
+
          RooDataHist dh("dh","e-e+ peak histo",x,Import(*h1)) ;
+
          RooRealVar lambda("lambda", "slope", -0.01, -1., 1.);
          RooExponential expo("expo", "expo", x, lambda);
          
 
          RooRealVar mass("mass","Central value of Gaussian",90.,80.,100.);
          RooRealVar sigma("sigma","Width of Gaussian",20,0,100);
+         RooRealVar alpha("alpha","Alpha",40.,0.,100.);
+         RooRealVar n("n","Order",6,0.,10.);
+
+         RooCBShape crystalball("crystalball", "Signal Region", x,mass,sigma,alpha,n);
+
          RooGaussian signal("gaus", "The signal distribution", x, mass, sigma); 
 
-         RooRealVar b("b", "Number of background events", 0, 40000);
-         RooRealVar s("s", "Number of signal events", 0, 40000);
+         RooRealVar b("b", "Number of background events", 0, 5500);
+         RooRealVar s("s", "Number of signal events", 0, 500);
+
          RooBernstein bg_bern("bg_bern","background",x, RooArgList(a1,a2,a3,a4,a5,a6,a7,a8,a9));
 
-         RooAddPdf fullModel("fullModel", "Signal + bg_bern", RooArgList(signal, bg_bern), RooArgList(s, b));
-         RooFitResult* r = fullModel.fitTo(dh,Save(kTRUE),Range(10.,170.)) ;
-         r -> Print();
-         RooPlot* frame1 = x.frame();
-         RooPlot* frame2 = x.frame();
+         // RooAddPdf fullModel("fullModel", "signal + bg_bern", RooArgList(signal, bg_bern), RooArgList(s, b));
+         RooAddPdf fullModel("fullModel", "crystalball + bg_bern", RooArgList(crystalball, bg_bern), RooArgList(s, b));
 
-         dh.plotOn(frame1);
-         fullModel.plotOn(frame1);
-         fullModel.plotOn(frame2);
+         RooFitResult* r = fullModel.fitTo(dh,Save()) ;
+         r -> Print();
+         
+         RooPlot* frame1 = x.frame(Title("Imported Histogram and fullModel fit"));
+         RooPlot* frame2 = x.frame(Title("PDF: fullModel = CB + Bernstein"));
+         RooPlot* frame3 = x.frame(Title("Background: Bernstein Polynomial (N = 8)"));
+
+         dh.plotOn(frame1,DataError(RooAbsData::None));
+         // bg_bern.plotOn(frame1);
+         fullModel.plotOn(frame1,LineColor(kRed));
+         fullModel.plotOn(frame2,LineColor(kRed));
+         bg_bern.plotOn(frame3,LineColor(kBlack));
          // expo.plotOn(frame);
+
+         fullModel.paramOn(frame2,Layout(0.55,0.95,0.8)) ;
          
          // frame -> Draw();
-         TCanvas* c = new TCanvas("canvas","canvas",1000,1000) ;
+         TCanvas* c = new TCanvas("canvas","canvas",1366,768) ;
          c -> Divide(2,2);
          c -> cd(1);
          frame1 -> Draw();
          c -> cd(2);
          frame2 ->Draw();
+         c -> cd(3);
+         frame3 ->Draw();
+         c -> cd(4);
+         h1 -> Draw();
 
 
   

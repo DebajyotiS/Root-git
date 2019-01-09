@@ -192,17 +192,12 @@ void zdecay::Loop()
          
          fullModel.plotOn(frame1,LineColor(kRed));
          fullModel.plotOn(frame2,LineColor(kRed));
-         bg_bern.plotOn(frame1,LineColor(kGreen));
+         bg_bern.plotOn(frame2,LineColor(kGreen));
          
           
          TH1 *h2 = bg_bern.createHistogram("background;mass;count", x, Binning(200,30.,500.));
          // cout << fullModel.expectedEvents(RooArgSet(x)) - b.getVal() << endl;
-         TH1* h12 = new TH1F("h12", "scaled background", 200, 30., 500.0); 
-         h12 -> Add(h2, 1.0*b.getVal());
-       
-       TH1F *h11 = new TH1F(*h1);
-       h11->SetNameTitle("h12", "signal only");
-       h11->Add(h12, -1.0);
+	     h1 -> Add(h2, -1.0*b.getVal());
        
         
 
@@ -215,16 +210,16 @@ void zdecay::Loop()
          c -> cd(1);
          frame1 -> Draw();
          c -> cd(2);
-         h11->Draw();
+         frame2->Draw();
          c -> cd(3);
-         h12 -> Draw();
+         h1 -> Draw();
          c -> cd(4);
          
 
-         TFile f("result.root","recreate");
-         c -> Write();
-         r -> Write();
-          f.Close();
+         // TFile f("result.root","recreate");
+         // c -> Write();
+         // r -> Write();
+         //  f.Close();
          
        
 

@@ -94,15 +94,17 @@ void zdecay::Loop()
 {
 
    
-   // cout << "Begin" << endl;
+   cout << "Begin" << endl;
    if (fChain == 0) return;  
    
-   TH1F *h1 = new TH1F("h1","Histogram;Mass;Count",150,0,600);
-   // h1.FillRandom("gaus",250000);
+   TH1F *h1 = new TH1F("h1","e-e+ spectra;Mass;Events",200,30.,500.);
+   
+   
    
    Long64_t nentries = fChain->GetEntriesFast();
    cout<<"Total entries "<<nentries<<endl<<endl;
-   Long64_t nbytes = 0, nb = 0;
+   Long64_t nbytes = 0, nb = 0; 
+  
 
    for (Long64_t jentry=0; jentry<nentries;jentry++) {
       Long64_t ientry = LoadTree(jentry);
@@ -118,6 +120,7 @@ void zdecay::Loop()
             // which is inserted into the vector - electrons
 
       if(nEle>1) {
+         
          for (int i=0 ;i<nEle; i++){
             particles electron(elePhi -> at(i),eleEta->at(i),elePt->at(i),eleCharge->at(i));
             electrons.push_back(electron);
@@ -136,12 +139,12 @@ void zdecay::Loop()
       
                                                     }
 
-         // h1->Draw();
          
-
-         RooRealVar x("x","mass",18.,500.);
-         x.setRange("Range1",25.,75.) ;
-         x.setRange("Range2",107.,500.) ;
+         
+        
+         RooRealVar x("x","mass",30.,500.);
+         // x.setRange("Range1",30.,75.) ;
+         // x.setRange("Range2",107.,495.) ;
          RooRealVar a1("a1","a1",-50,1000);
          RooRealVar a2("a2","a2",-50,400);
          RooRealVar a3("a3","a3",-50,400);
@@ -153,20 +156,21 @@ void zdecay::Loop()
          RooRealVar a9("a9","a9",-50,100);
          RooRealVar aa("aa","aa",-50,100);
 
-         RooDataHist dh("dh","e-e+ peak histo",x,Import(*h1)) ;
+         RooDataHist dh("dh","e-e+",x,Import(*h1)) ;
+        
 
-         RooRealVar lambda("lambda", "slope", -0.01, -1., 1.);
-         RooExponential expo("expo", "expo", x, lambda);
+         // RooRealVar lambda("lambda", "slope", -0.01, -1., 1.);
+         // RooExponential expo("expo", "expo", x, lambda);
          
 
          RooRealVar mass("mass","Central value of Gaussian",90.,80.,100.);
          RooRealVar sigma("sigma","Width of Gaussian",20,0,100);
-         RooRealVar alpha("alpha","Alpha",40.,0.,100.);
-         RooRealVar n("n","Order",6,0.,10.);
+         RooRealVar alpha("alpha","Alpha",40.,-100,100.);
+         RooRealVar n("n","Order",6,-10.,10.);
 
          RooCBShape crystalball("crystalball", "Signal Region", x,mass,sigma,alpha,n);
 
-         RooGaussian signal("gaus", "The signal distribution", x, mass, sigma); 
+         // RooGaussian signal("gaus", "The signal distribution", x, mass, sigma); 
 
          RooRealVar b("b", "Number of background events", 0, 5500);
          RooRealVar s("s", "Number of signal events", 0, 500);
@@ -177,32 +181,54 @@ void zdecay::Loop()
          RooAddPdf fullModel("fullModel", "crystalball + bg_bern", RooArgList(crystalball, bg_bern), RooArgList(s, b));
 
          RooFitResult* r = fullModel.fitTo(dh,Save()) ;
-         r -> Print();
+         // r -> Print();
          
          RooPlot* frame1 = x.frame(Title("Imported Histogram and fullModel fit"));
          RooPlot* frame2 = x.frame(Title("PDF: fullModel = CB + Bernstein"));
          RooPlot* frame3 = x.frame(Title("Background: Bernstein Polynomial (N = 8)"));
+         RooPlot* frame4 = x.frame(Title("Background: Histogram"));
 
          dh.plotOn(frame1,DataError(RooAbsData::None));
-         // bg_bern.plotOn(frame1);
+         
          fullModel.plotOn(frame1,LineColor(kRed));
          fullModel.plotOn(frame2,LineColor(kRed));
-         bg_bern.plotOn(frame3,LineColor(kBlack));
-         // expo.plotOn(frame);
-
-         fullModel.paramOn(frame2,Layout(0.55,0.95,0.8)) ;
+         bg_bern.plotOn(frame1,LineColor(kGreen));
          
-         // frame -> Draw();
-         TCanvas* c = new TCanvas("canvas","canvas",1366,768) ;
+          
+         TH1 *h2 = bg_bern.createHistogram("background;mass;count", x, Binning(200,30.,500.));
+         // cout << fullModel.expectedEvents(RooArgSet(x)) - b.getVal() << endl;
+         TH1* h12 = new TH1F("h12", "scaled background", 200, 30., 500.0); 
+         h12 -> Add(h2, 1.0*b.getVal());
+       
+       TH1F *h11 = new TH1F(*h1);
+       h11->SetNameTitle("h12", "signal only");
+       h11->Add(h12, -1.0);
+       
+        
+
+         fullModel.paramOn(frame1,Layout(0.55,0.95,0.8));
+         
+         
+         TCanvas* c = new TCanvas("canvas","canvas",1024,1024) ;
+         
          c -> Divide(2,2);
          c -> cd(1);
          frame1 -> Draw();
          c -> cd(2);
-         frame2 ->Draw();
+         h11->Draw();
          c -> cd(3);
-         frame3 ->Draw();
+         h12 -> Draw();
          c -> cd(4);
-         h1 -> Draw();
+         
+
+         TFile f("result.root","recreate");
+         c -> Write();
+         r -> Write();
+          f.Close();
+         
+       
+
+    
 
 
   
@@ -220,16 +246,16 @@ void zdecay::Loop()
 
       //! The crystalbal+expo fit routine
       // TF1 *fit = new TF1("fit", "crystalball(0) + expo(5)", 0., 1000.);
-      // fit ->SetParameters(160.0,90.0,9.0,1.0,220.0, 0.01);
+      // fit ->SetParameters(130.0,90.0,9.0,1.0,300.0, 0.01);
       // for (Int_t i = 0; i < fit->GetNpar(); i++) std::cout << i << " : " << fit->GetParName(i) << std::endl;
-      // h1->Fit("fit", "", "", 18., 200.);
+      // h1->Fit("fit", "", "", 30., 200.);
       
 
-      // TF1 *fline = new TF1("fline","expo(0)",18.,550.);
-      // fline->SetParameters(220.,-0.01);
+      // TF1 *fline = new TF1("fline","expo(0)",30.,550.);
+      // fline->SetParameters(300.,-0.01);
    
-      // h1->Fit("fline","","",18.,65.);
-      // h1->Fit("fline","","",105.,600.);
+      // h1->Fit("fline","","",30.,65.);
+      // h1->Fit("fline","","",105.,300.);
       
 
       //! This part is to create a file and save the plots.
@@ -291,6 +317,74 @@ void zdecay::Loop()
 //    frame1 -> Draw();
 //    c -> cd(3);
 //    frame3 -> Draw();
+
+
+// CB (Gaus) + Bernstein Polynomial fit :
+// RooRealVar x("x","mass",30.,500.);
+//x.setRange("Range1",25.,75.) ;
+//x.setRange("Range2",107.,500.) ;
+//RooRealVar a1("a1","a1",-50,1000);
+//RooRealVar a2("a2","a2",-50,400);
+//RooRealVar a3("a3","a3",-50,400);
+//RooRealVar a4("a4","a4",-500,1000);
+//RooRealVar a5("a5","a5",-50,1000);
+//RooRealVar a6("a6","a6",-50,1000);
+//RooRealVar a7("a7","a7",-50,1000);
+//RooRealVar a8("a8","a8",-50,100);
+//RooRealVar a9("a9","a9",-50,100);
+//RooRealVar aa("aa","aa",-50,100);
+
+//RooDataHist dh("dh","e-e+ peak histo",x,Import(*h1)) ;
+
+//RooRealVar lambda("lambda", "slope", -0.01, -1., 1.);
+//RooExponential expo("expo", "expo", x, lambda);
+  
+
+//RooRealVar mass("mass","Central value of Gaussian",90.,80.,100.);
+//RooRealVar sigma("sigma","Width of Gaussian",20,0,100);
+//RooRealVar alpha("alpha","Alpha",40.,0.,100.);
+//RooRealVar n("n","Order",6,0.,10.);
+
+//RooCBShape crystalball("crystalball", "Signal Region", x,mass,sigma,alpha,n);
+
+//RooGaussian signal("gaus", "The signal distribution", x, mass, sigma); 
+
+//RooRealVar b("b", "Number of background events", 0, 5500);
+//RooRealVar s("s", "Number of signal events", 0, 500);
+
+//RooBernstein bg_bern("bg_bern","background",x, RooArgList(a1,a2,a3,a4,a5,a6,a7,a8,a9));
+
+//// RooAddPdf fullModel("fullModel", "signal + bg_bern", RooArgList(signal, bg_bern), RooArgList(s, b));
+//RooAddPdf fullModel("fullModel", "crystalball + bg_bern", RooArgList(crystalball, bg_bern), RooArgList(s, b));
+
+//RooFitResult* r = fullModel.fitTo(dh,Save()) ;
+//r -> Print();
+  
+//RooPlot* frame1 = x.frame(Title("Imported Histogram and fullModel fit"));
+//RooPlot* frame2 = x.frame(Title("PDF: fullModel = CB + Bernstein"));
+//RooPlot* frame3 = x.frame(Title("Background: Bernstein Polynomial (N = 8)"));
+
+//dh.plotOn(frame1,DataError(RooAbsData::None));
+//// bg_bern.plotOn(frame1);
+//fullModel.plotOn(frame1,LineColor(kRed));
+//fullModel.plotOn(frame2,LineColor(kRed));
+//bg_bern.plotOn(frame3,LineColor(kBlack));
+//// expo.plotOn(frame);
+
+//fullModel.paramOn(frame2,Layout(0.55,0.95,0.8)) ;
+  
+//// frame -> Draw();
+//TCanvas* c = new TCanvas("canvas","canvas",1366,768) ;
+//c -> Divide(2,2);
+//c -> cd(1);
+//frame1 -> Draw();
+//c -> cd(2);
+//frame2 ->Draw();
+//c -> cd(3);
+//frame3 ->Draw();
+//c -> cd(4);
+//h1 -> Draw();
+
       
       
      
